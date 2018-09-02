@@ -147,14 +147,45 @@ impl Scene {
             body.draw(&mut self.canvas);
         }
         //self.canvas.present();
+
+        // Draw manifolds
+        self.canvas.context.set_stroke_style_color("red");
+        self.canvas.context.set_fill_style_color("red");
+        for manifold in &self.contacts {
+            for contact in &manifold.contacts {
+                self.canvas.context.fill_rect(
+                    contact.x * self.canvas.scaled_width,
+                    contact.y * self.canvas.scaled_height,
+                    0.05 * self.canvas.scaled_width,
+                    0.05 * self.canvas.scaled_width,
+                );
+            }
+        }
+        self.canvas.context.set_stroke_style_color("green");
+        for manifold in &self.contacts {
+            let n = manifold.normal;
+            for contact in &manifold.contacts {
+                self.canvas.context.begin_path();
+                self.canvas.context.move_to(
+                    contact.x * self.canvas.scaled_width,
+                    contact.y * self.canvas.scaled_height,
+                );
+                let c = Vector2d::new(
+                    contact.x * self.canvas.scaled_width,
+                    contact.y * self.canvas.scaled_height,
+                ) + n * 0.5 * self.canvas.scaled_width;
+                self.canvas.context.line_to(c.x, c.y);
+                self.canvas.context.stroke();
+            }
+        }
     }
     pub fn step(&mut self) {
         // Generate new collision info
         self.contacts.clear();
         for (i, body_a) in self.bodies.iter().enumerate() {
             for body_b in self.bodies.iter().skip(i + 1) {
-                let object_a =body_a.object();
-                let object_b =body_b.object();
+                let object_a = body_a.object();
+                let object_b = body_b.object();
                 if object_a.borrow().inverse_mass == 0.0 && object_b.borrow().inverse_mass == 0.0 {
                     continue;
                 }
@@ -182,8 +213,8 @@ impl Scene {
         }
 
         // Clear all forces
-        for body in &mut self.bodies {
-            body.clear_forces();
-        }
+        //for body in &mut self.bodies {
+            //body.clear_forces();
+        //}
     }
 }

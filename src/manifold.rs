@@ -1,15 +1,15 @@
 use body::*;
 use math::*;
 
-use std::rc::Rc;
 use std::cell::RefCell;
+use std::rc::Rc;
 
 pub struct Manifold {
     object_a: Rc<RefCell<Object>>,
     object_b: Rc<RefCell<Object>>,
     penetration: f64,
-    normal: Vector2d<f64>,
-    contacts: Vec<Vector2d<f64>>,
+    pub normal: Vector2d<f64>,
+    pub contacts: Vec<Vector2d<f64>>,
     mixed_restitution: f64,
     mixed_dynamic_friction: f64,
     mixed_static_friction: f64,
@@ -55,6 +55,32 @@ impl Manifold {
             let impulse = self.normal * j;
             object_a.apply_impulse(-impulse, r_a);
             object_b.apply_impulse(impulse, r_b);
+
+            // Friction impulse
+            let mut t = v_ab - (self.normal * (v_ab * self.normal));
+            if t.len() < 0.01 {
+                return;
+            }
+            t.normalize();
+
+            // j tangent magnitude
+            let jt = -v_ab * t / inv_mass_inertia / self.contacts.len() as f64;
+            console!(log, "jt: %f", jt);
+            if jt.abs() < 0.01 {
+                return;
+            }
+
+            // Coulumb's law
+            let tangent_impulse;
+            if jt.abs() < j * self.mixed_static_friction {
+                tangent_impulse = t * jt;
+            } else {
+                tangent_impulse = t * (-j) * self.mixed_dynamic_friction;
+            }
+            console!(log, "tangent_impulse: %f, %f", tangent_impulse.x, tangent_impulse.y);
+
+            object_a.apply_impulse(-tangent_impulse, r_a);
+            object_b.apply_impulse(tangent_impulse, r_b);
         }
     }
     fn circle_to_circle(a: &Circle, b: &Circle) -> Option<Manifold> {
@@ -95,10 +121,7 @@ impl Manifold {
     }
 
     // If there is a collision, return the manifold, otherwise return None
-    pub fn solve_collision<'b>(
-        a: &Box<RigidBody + 'b>,
-        b: &Box<RigidBody + 'b>,
-    ) -> Option<Self> {
+    pub fn solve_collision<'b>(a: &Box<RigidBody + 'b>, b: &Box<RigidBody + 'b>) -> Option<Self> {
         if let Some(circle_a) = a.downcast_ref::<Circle>() {
             if let Some(circle_b) = b.downcast_ref::<Circle>() {
                 Self::circle_to_circle(circle_a, circle_b)

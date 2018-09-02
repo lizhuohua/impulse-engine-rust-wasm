@@ -1,9 +1,9 @@
 use math::*;
 use rand::*;
 use scene::*;
+use std::cell::RefCell;
 use std::f64::consts::PI;
 use std::rc::Rc;
-use std::cell::RefCell;
 
 use downcast_rs::Downcast;
 
@@ -45,8 +45,8 @@ impl Object {
             position: Vector2d::new(x, y),
             velocity: Vector2d::new(0.0, 0.0),
             force: Vector2d::new(0.0, 0.0),
-            inertia: 0.0,
-            inverse_inertia: 0.0,
+            inertia: 1.0,
+            inverse_inertia: 1.0,
             mass: 1.0,
             inverse_mass: 1.0,
             angular_velocity: 0.0,
@@ -63,13 +63,14 @@ impl Object {
         }
     }
 
-    fn apply_force(&mut self, f: Vector2d<f64>) {
-        self.force += f;
-    }
+    //fn apply_force(&mut self, f: Vector2d<f64>) {
+        //self.force += f;
+    //}
 
     pub fn apply_impulse(&mut self, impulse: Vector2d<f64>, contact_vector: Vector2d<f64>) {
         self.velocity += impulse * self.inverse_mass;
         self.angular_velocity += contact_vector.cross_product(impulse) * self.inverse_inertia;
+        console!(log, "angular_velocity: %f", self.angular_velocity);
     }
 
     fn set_static(&mut self) {
@@ -81,13 +82,15 @@ impl Object {
 
     fn integrate_forces(&mut self, dt: f64) {
         if self.inverse_mass != 0.0 {
-            self.velocity += (self.force * self.inverse_mass + GRAVITY) * (dt)
+            self.velocity += (self.force * self.inverse_mass + GRAVITY) * (dt);
+            self.angular_velocity += self.torque * self.inverse_inertia * dt;
         }
     }
 
     fn integrate_velocity(&mut self, dt: f64) {
         if self.inverse_mass != 0.0 {
             self.position += self.velocity * dt;
+            self.orient += self.angular_velocity * dt;
             //self.integrate_forces(dt);
         }
     }
@@ -113,7 +116,6 @@ pub struct Circle {
 
 impl RigidBody for Circle {
     fn clear_forces(&mut self) {
-
         self.object.borrow_mut().force.set(0.0, 0.0);
         self.object.borrow_mut().torque = 0.0;
     }
