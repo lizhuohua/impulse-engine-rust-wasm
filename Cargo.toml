@@ -1,0 +1,10 @@
+[package]
+name = "impulse-engine-wasm"
+version = "0.1.0"
+authors = ["zhuohuali"]
+
+[dependencies]
+num-traits = "0.2.5"
+stdweb = "0.4.9"
+rand = { version = "0.5.5", features = ["stdweb"] }
+downcast-rs = "1.0.3"

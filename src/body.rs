@@ -1,0 +1,306 @@
+use math::*;
+use rand::*;
+use scene::*;
+use std::f64::consts::PI;
+use std::rc::Rc;
+use std::cell::RefCell;
+
+use downcast_rs::Downcast;
+
+const GRAVITY: Vector2d<f64> = Vector2d { x: 0.0, y: 9.8 };
+
+#[derive(Clone)]
+pub struct Color {
+    r: u8,
+    g: u8,
+    b: u8,
+}
+
+#[derive(Clone)]
+pub struct Object {
+    pub position: Vector2d<f64>,
+    pub velocity: Vector2d<f64>,
+    pub force: Vector2d<f64>,
+
+    pub inertia: f64,
+    pub inverse_inertia: f64,
+    pub mass: f64,
+    pub inverse_mass: f64,
+
+    pub angular_velocity: f64,
+    pub torque: f64,
+    pub orient: f64,
+
+    pub static_friction: f64,
+    pub dynamic_friction: f64,
+    pub restitution: f64,
+
+    pub color: Color,
+}
+
+impl Object {
+    fn new(x: f64, y: f64) -> Self {
+        let mut rng = Rng::new();
+        Self {
+            position: Vector2d::new(x, y),
+            velocity: Vector2d::new(0.0, 0.0),
+            force: Vector2d::new(0.0, 0.0),
+            inertia: 0.0,
+            inverse_inertia: 0.0,
+            mass: 1.0,
+            inverse_mass: 1.0,
+            angular_velocity: 0.0,
+            torque: 0.0,
+            orient: (rng.gen_range(0, 2000) - 1000) as f64 / 1000.0 * PI,
+            static_friction: 0.5,
+            dynamic_friction: 0.3,
+            restitution: 0.2,
+            color: Color {
+                r: rng.gen_range(50, 255) as u8,
+                g: rng.gen_range(50, 255) as u8,
+                b: rng.gen_range(50, 255) as u8,
+            },
+        }
+    }
+
+    fn apply_force(&mut self, f: Vector2d<f64>) {
+        self.force += f;
+    }
+
+    pub fn apply_impulse(&mut self, impulse: Vector2d<f64>, contact_vector: Vector2d<f64>) {
+        self.velocity += impulse * self.inverse_mass;
+        self.angular_velocity += contact_vector.cross_product(impulse) * self.inverse_inertia;
+    }
+
+    fn set_static(&mut self) {
+        self.inertia = Float::infinity();
+        self.inverse_inertia = f64::zero();
+        self.mass = Float::infinity();
+        self.inverse_mass = f64::zero();
+    }
+
+    fn integrate_forces(&mut self, dt: f64) {
+        if self.inverse_mass != 0.0 {
+            self.velocity += (self.force * self.inverse_mass + GRAVITY) * (dt)
+        }
+    }
+
+    fn integrate_velocity(&mut self, dt: f64) {
+        if self.inverse_mass != 0.0 {
+            self.position += self.velocity * dt;
+            //self.integrate_forces(dt);
+        }
+    }
+}
+
+pub trait RigidBody: Downcast {
+    fn draw(&self, canvas: &mut Canvas);
+
+    fn integrate_forces(&mut self, dt: f64);
+
+    fn integrate_velocity(&mut self, dt: f64);
+
+    fn clear_forces(&mut self);
+
+    fn object(&self) -> Rc<RefCell<Object>>;
+}
+impl_downcast!(RigidBody);
+
+pub struct Circle {
+    pub radius: f64,
+    pub object: Rc<RefCell<Object>>,
+}
+
+impl RigidBody for Circle {
+    fn clear_forces(&mut self) {
+
+        self.object.borrow_mut().force.set(0.0, 0.0);
+        self.object.borrow_mut().torque = 0.0;
+    }
+    fn object(&self) -> Rc<RefCell<Object>> {
+        self.object.clone()
+    }
+    fn integrate_forces(&mut self, dt: f64) {
+        self.object.borrow_mut().integrate_forces(dt);
+    }
+
+    fn integrate_velocity(&mut self, dt: f64) {
+        self.object.borrow_mut().integrate_velocity(dt);
+    }
+    fn draw(&self, canvas: &mut Canvas) {
+        let object = self.object.borrow();
+        // Handle scale
+        let mut position = object.position;
+        position.x *= canvas.scaled_width;
+        position.y *= canvas.scaled_height;
+        // console!(log, "draw a circle at %f, %f", position.x,position.y);
+        let radius = self.radius * canvas.scaled_width;
+
+        let k_segments = 30;
+        let mut theta = 0.0;
+        let inc = 2.0 * PI / k_segments as f64;
+        let mut begin = Vector2d::new(theta.cos(), theta.sin());
+        begin = begin * radius;
+        begin += position;
+        canvas.context.begin_path();
+        let color = format!(
+            "#{:02x}{:02x}{:02x}",
+            object.color.r, object.color.g, object.color.b
+        );
+        canvas.context.set_stroke_style_color(&color);
+        canvas.context.move_to(begin.x, begin.y);
+        for _ in 0..k_segments {
+            theta += inc;
+            let mut point = Vector2d::new(theta.cos(), theta.sin());
+            point = point * radius;
+            point += position;
+            canvas.context.line_to(point.x, point.y);
+        }
+        let mut r = Vector2d::new(0.0, radius);
+        r.rotate(object.orient);
+        r += position;
+        canvas.context.move_to(position.x, position.y);
+        canvas.context.line_to(r.x, r.y);
+        canvas.context.stroke();
+    }
+}
+
+impl Circle {
+    pub fn new(x: f64, y: f64, r: f64) -> Circle {
+        Circle {
+            radius: r,
+            object: Rc::new(RefCell::new(Object::new(x, y))),
+        }
+    }
+    pub fn set_static(&mut self) {
+        self.object.borrow_mut().set_static();
+    }
+}
+
+pub struct Polygon {
+    vertices: Vec<Vector2d<f64>>,
+    normals: Vec<Vector2d<f64>>,
+    object: Rc<RefCell<Object>>,
+}
+
+impl Polygon {
+    pub fn mass_center(&self) -> Vector2d<f64> {
+        let mut center = Vector2d::new(0.0, 0.0);
+        for &v in &self.vertices {
+            center += v;
+        }
+        center / self.vertices.len() as f64
+    }
+    pub fn set_static(&mut self) {
+        self.object.borrow_mut().set_static();
+    }
+    pub fn set_vertices(&mut self, vertices: &Vec<Vector2d<f64>>) {
+        self.vertices = vertices.clone();
+    }
+    pub fn new(x: f64, y: f64, r: f64) -> Self {
+        let mut rng = Rng::new();
+        let count = rng.gen_range(3, 64);
+        let mut vertices = Vec::new();
+        for _ in 0..count {
+            let x = (rng.gen_range(0, 2000) - 1000) as f64 / 1000.0 * r as f64;
+            let y = (rng.gen_range(0, 2000) - 1000) as f64 / 1000.0 * r as f64;
+            vertices.push(Vector2d::new(x, y));
+        }
+        // Test these vertices to ensure it is really a convex polygon
+        let mut right_most = vertices[0];
+        for &v in &vertices {
+            if v.x > right_most.x {
+                right_most = v;
+            } else if v.x == right_most.x {
+                if v.y < right_most.y {
+                    right_most = v;
+                }
+            }
+        }
+        let mut result_vertices = Vec::new();
+        result_vertices.push(right_most);
+        let mut next_index = vertices[0].clone();
+        let mut index = right_most;
+        loop {
+            for &v in &vertices {
+                if next_index == index {
+                    next_index = v;
+                }
+                let e1 = next_index - index;
+                let e2 = v - index;
+                let c = e1.cross_product(e2);
+                if c < 0.0 {
+                    next_index = v;
+                } else if c == 0.0 && e2.len_square() > e1.len_square() {
+                    next_index = v;
+                }
+            }
+
+            if next_index == right_most {
+                break;
+            }
+
+            result_vertices.push(next_index);
+            index = next_index;
+        }
+
+        Self {
+            vertices: result_vertices,
+            normals: vertices,
+            object: Rc::new(RefCell::new(Object::new(x, y))),
+        }
+    }
+}
+
+impl RigidBody for Polygon {
+    fn clear_forces(&mut self) {
+        self.object.borrow_mut().force.set(0.0, 0.0);
+        self.object.borrow_mut().torque = 0.0;
+    }
+    fn object(&self) -> Rc<RefCell<Object>> {
+        self.object.clone()
+    }
+    fn integrate_forces(&mut self, dt: f64) {
+        self.object.borrow_mut().integrate_forces(dt);
+    }
+
+    fn integrate_velocity(&mut self, dt: f64) {
+        self.object.borrow_mut().integrate_velocity(dt);
+    }
+    fn draw(&self, canvas: &mut Canvas) {
+        let object = self.object.borrow();
+        let mut position = object.position;
+        position.x *= canvas.scaled_width;
+        position.y *= canvas.scaled_height;
+
+        let mut begin = self.vertices[0];
+        begin = begin * canvas.scaled_width;
+        begin += position;
+        canvas.context.begin_path();
+        let color = format!(
+            "#{:02x}{:02x}{:02x}",
+            object.color.r, object.color.g, object.color.b
+        );
+        canvas.context.set_stroke_style_color(&color);
+        canvas.context.move_to(begin.x, begin.y);
+        for &v in &self.vertices {
+            let mut point = v;
+            point = point * canvas.scaled_width;
+            point += position;
+            canvas.context.line_to(point.x, point.y);
+        }
+        canvas.context.close_path();
+        canvas.context.stroke();
+
+        let mut mass_center = self.mass_center();
+        mass_center.x *= canvas.scaled_width;
+        mass_center.y *= canvas.scaled_height;
+        mass_center += position;
+        canvas.context.fill_rect(
+            mass_center.x,
+            mass_center.y,
+            0.05 * canvas.scaled_width,
+            0.05 * canvas.scaled_width,
+        );
+    }
+}
