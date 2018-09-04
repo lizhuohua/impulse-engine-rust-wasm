@@ -166,15 +166,16 @@ impl Scene {
             let n = manifold.normal;
             for contact in &manifold.contacts {
                 self.canvas.context.begin_path();
-                self.canvas.context.move_to(
+                let b = Vector2d::new(
                     contact.x * self.canvas.scaled_width,
                     contact.y * self.canvas.scaled_height,
-                );
-                let c = Vector2d::new(
+                ) + (-n) * 0.5 * self.canvas.scaled_width;
+                self.canvas.context.move_to(b.x, b.y);
+                let e = Vector2d::new(
                     contact.x * self.canvas.scaled_width,
                     contact.y * self.canvas.scaled_height,
                 ) + n * 0.5 * self.canvas.scaled_width;
-                self.canvas.context.line_to(c.x, c.y);
+                self.canvas.context.line_to(e.x, e.y);
                 self.canvas.context.stroke();
             }
         }
@@ -212,9 +213,9 @@ impl Scene {
             body.integrate_velocity(self.m_dt);
         }
 
-        // Clear all forces
-        //for body in &mut self.bodies {
-            //body.clear_forces();
-        //}
+        // Correct positions
+        for contact in &mut self.contacts {
+            contact.position_correction();
+        }
     }
 }

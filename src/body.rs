@@ -51,20 +51,21 @@ impl Object {
             inverse_mass: 1.0,
             angular_velocity: 0.0,
             torque: 0.0,
-            orient: (rng.gen_range(0, 2000) - 1000) as f64 / 1000.0 * PI,
+            // orient: (rng.gen_range(0, 2000) - 1000) as f64 / 1000.0 * PI,
+            orient: 0.0,
             static_friction: 0.5,
             dynamic_friction: 0.3,
             restitution: 0.2,
             color: Color {
-                r: rng.gen_range(50, 255) as u8,
-                g: rng.gen_range(50, 255) as u8,
-                b: rng.gen_range(50, 255) as u8,
+                r: rng.gen_range(80, 255) as u8,
+                g: rng.gen_range(80, 255) as u8,
+                b: rng.gen_range(80, 255) as u8,
             },
         }
     }
 
     //fn apply_force(&mut self, f: Vector2d<f64>) {
-        //self.force += f;
+    //self.force += f;
     //}
 
     pub fn apply_impulse(&mut self, impulse: Vector2d<f64>, contact_vector: Vector2d<f64>) {
@@ -169,10 +170,28 @@ impl RigidBody for Circle {
 
 impl Circle {
     pub fn new(x: f64, y: f64, r: f64) -> Circle {
-        Circle {
+        let mut c = Circle {
             radius: r,
             object: Rc::new(RefCell::new(Object::new(x, y))),
-        }
+        };
+        c.initialize();
+        c
+    }
+    fn initialize(&mut self) {
+        let density = 1.0;
+        let mut object = self.object.borrow_mut();
+        object.mass = PI * self.radius * self.radius * density;
+        object.inverse_mass = if object.mass == f64::infinity() {
+            0.0
+        } else {
+            1.0 / object.mass
+        };
+        object.inertia = object.mass * self.radius * self.radius / 2.0;
+        object.inverse_inertia = if object.inertia == f64::infinity() {
+            0.0
+        } else {
+            1.0 / object.inertia
+        };
     }
     pub fn set_static(&mut self) {
         self.object.borrow_mut().set_static();
@@ -180,24 +199,53 @@ impl Circle {
 }
 
 pub struct Polygon {
-    vertices: Vec<Vector2d<f64>>,
-    normals: Vec<Vector2d<f64>>,
-    object: Rc<RefCell<Object>>,
+    pub vertices: Vec<Vector2d<f64>>,
+    pub normals: Vec<Vector2d<f64>>,
+    pub object: Rc<RefCell<Object>>,
 }
 
 impl Polygon {
-    pub fn mass_center(&self) -> Vector2d<f64> {
-        let mut center = Vector2d::new(0.0, 0.0);
-        for &v in &self.vertices {
-            center += v;
+    fn initialize(&mut self) {
+
+        // Calculate centroid and moment of interia
+        let density = 1.0;
+        let mut centroid = Vector2d::new(0.0, 0.0);
+        let mut area = 0.0;
+        let mut inertia = 0.0;
+        let n = self.vertices.len();
+        for i1 in 0..n {
+            // Triangle vertices, the third vertex is (0, 0)
+            let p1 = self.vertices[i1];
+            let i2 = if i1 + 1 < n { i1 + 1 } else { 0 };
+            let p2 = self.vertices[i2];
+            let triangle_area = 0.5 * p1.cross_product(p2).abs();
+            area += triangle_area;
+            centroid += (p1 + p2) * (1.0 / 3.0 * triangle_area);
+            inertia +=
+                triangle_area * density * (p1.len_square() + p2.len_square() + p1 * p2) / 6.0;
         }
-        center / self.vertices.len() as f64
+        centroid /= area;
+        console!(log, "centroid: %f, %f", centroid.x, centroid.y);
+
+        // Make the centroid (0, 0)
+        for v in &mut self.vertices {
+            *v -= centroid;
+        }
+
+        // Calculate mass and interia
+        let mut object = self.object.borrow_mut();
+        object.mass = area * density;
+        object.inverse_mass = 1.0 / object.mass;
+        object.inertia = inertia - object.mass * centroid.len_square();
+        console!(log, "inertia: %f",object.inertia);
+        object.inverse_inertia = 1.0 / object.inverse_inertia;
     }
     pub fn set_static(&mut self) {
         self.object.borrow_mut().set_static();
     }
     pub fn set_vertices(&mut self, vertices: &Vec<Vector2d<f64>>) {
         self.vertices = vertices.clone();
+        //self.initialize();
     }
     pub fn new(x: f64, y: f64, r: f64) -> Self {
         let mut rng = Rng::new();
@@ -246,11 +294,24 @@ impl Polygon {
             index = next_index;
         }
 
-        Self {
-            vertices: result_vertices,
-            normals: vertices,
-            object: Rc::new(RefCell::new(Object::new(x, y))),
+        // Calculate face normals
+        let mut normals = Vec::new();
+        let n = result_vertices.len();
+        for i1 in 0..n {
+            let i2 = if i1 + 1 < n { i1 + 1 } else { 0 };
+            let face = result_vertices[i2] - result_vertices[i1];
+            let mut normal = Vector2d::new(face.y, -face.x);
+            normal.normalize();
+            normals.push(normal);
         }
+
+        let mut polygon = Self {
+            vertices: result_vertices,
+            normals: normals,
+            object: Rc::new(RefCell::new(Object::new(x, y))),
+        };
+        polygon.initialize();
+        polygon
     }
 }
 
@@ -277,6 +338,7 @@ impl RigidBody for Polygon {
 
         let mut begin = self.vertices[0];
         begin = begin * canvas.scaled_width;
+        begin.rotate(object.orient);
         begin += position;
         canvas.context.begin_path();
         let color = format!(
@@ -288,19 +350,16 @@ impl RigidBody for Polygon {
         for &v in &self.vertices {
             let mut point = v;
             point = point * canvas.scaled_width;
+            point.rotate(object.orient);
             point += position;
             canvas.context.line_to(point.x, point.y);
         }
         canvas.context.close_path();
         canvas.context.stroke();
 
-        let mut mass_center = self.mass_center();
-        mass_center.x *= canvas.scaled_width;
-        mass_center.y *= canvas.scaled_height;
-        mass_center += position;
         canvas.context.fill_rect(
-            mass_center.x,
-            mass_center.y,
+            position.x,
+            position.y,
             0.05 * canvas.scaled_width,
             0.05 * canvas.scaled_width,
         );

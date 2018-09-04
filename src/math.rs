@@ -1,7 +1,7 @@
 extern crate num_traits;
 pub use math::num_traits::float::Float;
 pub use math::num_traits::identities::Zero;
-use std::ops::{Add, AddAssign, Div, Mul, Neg, Sub, SubAssign};
+use std::ops::{Add, AddAssign, Div, DivAssign, Mul, MulAssign, Neg, Sub, SubAssign};
 
 #[derive(Copy, Clone, PartialEq)]
 pub struct Vector2d<T: Float> {
@@ -54,8 +54,8 @@ impl<T: Float> Mul<T> for Vector2d<T> {
     type Output = Self;
     fn mul(self, rhs: T) -> Self {
         Self {
-            x: self.x * rhs.clone(),
-            y: self.y * rhs.clone(),
+            x: self.x * rhs,
+            y: self.y * rhs,
         }
     }
 }
@@ -64,8 +64,8 @@ impl<T: Float> Div<T> for Vector2d<T> {
     type Output = Self;
     fn div(self, rhs: T) -> Self {
         Self {
-            x: self.x / rhs.clone(),
-            y: self.y / rhs.clone(),
+            x: self.x / rhs,
+            y: self.y / rhs,
         }
     }
 }
@@ -103,6 +103,21 @@ impl<T: Float> SubAssign for Vector2d<T> {
         self.y = self.y - other.y;
     }
 }
+
+impl<T: Float> MulAssign<T> for Vector2d<T> {
+    fn mul_assign(&mut self, rhs: T) {
+        self.x = self.x * rhs;
+        self.y = self.y * rhs;
+    }
+}
+
+impl<T: Float> DivAssign<T> for Vector2d<T> {
+    fn div_assign(&mut self, rhs: T) {
+        self.x = self.x / rhs;
+        self.y = self.y / rhs;
+    }
+}
+
 impl<T: Float> Neg for Vector2d<T> {
     type Output = Vector2d<T>;
     fn neg(self) -> Vector2d<T> {
