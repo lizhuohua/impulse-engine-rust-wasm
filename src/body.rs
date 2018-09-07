@@ -71,7 +71,7 @@ impl Object {
     pub fn apply_impulse(&mut self, impulse: Vector2d<f64>, contact_vector: Vector2d<f64>) {
         self.velocity += impulse * self.inverse_mass;
         self.angular_velocity += contact_vector.cross_product(impulse) * self.inverse_inertia;
-        console!(log, "angular_velocity: %f", self.angular_velocity);
+        // console!(log, "angular_velocity: %f", self.angular_velocity);
     }
 
     fn set_static(&mut self) {
@@ -107,6 +107,8 @@ pub trait RigidBody: Downcast {
     fn clear_forces(&mut self);
 
     fn object(&self) -> Rc<RefCell<Object>>;
+
+    fn radius(&self) -> f64;
 }
 impl_downcast!(RigidBody);
 
@@ -116,6 +118,9 @@ pub struct Circle {
 }
 
 impl RigidBody for Circle {
+    fn radius(&self) -> f64 {
+        return self.radius;
+    }
     fn clear_forces(&mut self) {
         self.object.borrow_mut().force.set(0.0, 0.0);
         self.object.borrow_mut().torque = 0.0;
@@ -197,6 +202,7 @@ impl Circle {
 }
 
 pub struct Polygon {
+    pub radius: f64,
     pub vertices: Vec<Vector2d<f64>>,
     pub normals: Vec<Vector2d<f64>>,
     pub object: Rc<RefCell<Object>>,
@@ -245,7 +251,7 @@ impl Polygon {
                 triangle_area * density * (p1.len_square() + p2.len_square() + p1 * p2) / 6.0;
         }
         centroid /= area;
-        console!(log, "centroid: %f, %f", centroid.x, centroid.y);
+        // console!(log, "centroid: %f, %f", centroid.x, centroid.y);
 
         // Make the centroid (0, 0)
         for v in &mut self.vertices {
@@ -257,7 +263,7 @@ impl Polygon {
         object.mass = area * density;
         object.inverse_mass = 1.0 / object.mass;
         object.inertia = inertia - object.mass * centroid.len_square();
-        console!(log, "inertia: %f", object.inertia);
+        // console!(log, "inertia: %f", object.inertia);
         object.inverse_inertia = 1.0 / object.inverse_inertia;
     }
     pub fn set_static(&mut self) {
@@ -272,8 +278,8 @@ impl Polygon {
         let count = rng.gen_range(3, 64);
         let mut vertices = Vec::new();
         for _ in 0..count {
-            let x = (rng.gen_range(0, 2000) - 1000) as f64 / 1000.0 * r as f64;
-            let y = (rng.gen_range(0, 2000) - 1000) as f64 / 1000.0 * r as f64;
+            let x = (rng.gen_range(0, 20000) - 10000) as f64 / 10000.0 * r as f64;
+            let y = (rng.gen_range(0, 20000) - 10000) as f64 / 10000.0 * r as f64;
             vertices.push(Vector2d::new(x, y));
         }
         // Test these vertices to ensure it is really a convex polygon
@@ -315,6 +321,7 @@ impl Polygon {
         }
 
         let mut polygon = Self {
+            radius: r * 1.5,
             vertices: result_vertices,
             normals: Vec::new(),
             object: Rc::new(RefCell::new(Object::new(x, y))),
@@ -325,6 +332,9 @@ impl Polygon {
 }
 
 impl RigidBody for Polygon {
+    fn radius(&self) -> f64 {
+        return self.radius;
+    }
     fn clear_forces(&mut self) {
         self.object.borrow_mut().force.set(0.0, 0.0);
         self.object.borrow_mut().torque = 0.0;

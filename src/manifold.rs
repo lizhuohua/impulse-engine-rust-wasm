@@ -37,18 +37,18 @@ impl Manifold {
         //canvas.context.set_stroke_style_color("green");
         //let n = self.normal;
         //for contact in &self.contacts {
-            //canvas.context.begin_path();
-            //let b = Vector2d::new(
-                //contact.x * canvas.scaled_width,
-                //contact.y * canvas.scaled_height,
-            //) + (-n) * 0.5 * canvas.scaled_width;
-            //canvas.context.move_to(b.x, b.y);
-            //let e = Vector2d::new(
-                //contact.x * canvas.scaled_width,
-                //contact.y * canvas.scaled_height,
-            //) + n * 0.5 * canvas.scaled_width;
-            //canvas.context.line_to(e.x, e.y);
-            //canvas.context.stroke();
+        //canvas.context.begin_path();
+        //let b = Vector2d::new(
+        //contact.x * canvas.scaled_width,
+        //contact.y * canvas.scaled_height,
+        //) + (-n) * 0.5 * canvas.scaled_width;
+        //canvas.context.move_to(b.x, b.y);
+        //let e = Vector2d::new(
+        //contact.x * canvas.scaled_width,
+        //contact.y * canvas.scaled_height,
+        //) + n * 0.5 * canvas.scaled_width;
+        //canvas.context.line_to(e.x, e.y);
+        //canvas.context.stroke();
         //}
     }
     pub fn position_correction(&mut self) {
@@ -113,7 +113,7 @@ impl Manifold {
 
             // j tangent magnitude
             let jt = -v_ab * t / inv_mass_inertia / self.contacts.len() as f64;
-            console!(log, "jt: %f", jt);
+            //console!(log, "jt: %f", jt);
             if jt.abs() < 0.01 {
                 return;
             }
@@ -125,12 +125,12 @@ impl Manifold {
             } else {
                 tangent_impulse = t * (-j) * self.mixed_dynamic_friction;
             }
-            console!(
-                log,
-                "tangent_impulse: %f, %f",
-                tangent_impulse.x,
-                tangent_impulse.y
-            );
+            //console!(
+            //log,
+            //"tangent_impulse: %f, %f",
+            //tangent_impulse.x,
+            //tangent_impulse.y
+            //);
 
             object_a.apply_impulse(-tangent_impulse, r_a);
             object_b.apply_impulse(tangent_impulse, r_b);

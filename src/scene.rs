@@ -72,7 +72,7 @@ impl Scene {
         fixed_circle.set_static();
         bodies.push(Box::new(fixed_circle) as Box<dyn RigidBody>);
 
-        let mut fixed_rectangle = Polygon::new(10.0, 17.0, 1.0);
+        let mut fixed_rectangle = Polygon::new(10.0, 17.0, 18.0);
         let top_right = Vector2d::new(9.0, -0.5);
         let top_left = Vector2d::new(-9.0, -0.5);
         let bottom_left = Vector2d::new(-9.0, 0.5);
@@ -143,6 +143,12 @@ impl Scene {
             for body_b in self.bodies.iter().skip(i + 1) {
                 let object_a = body_a.object();
                 let object_b = body_b.object();
+                let r1 = body_a.radius() * self.canvas.scaled_width;
+                let r2 = body_b.radius() * self.canvas.scaled_width;
+                if (object_a.borrow().position - object_b.borrow().position).len_square() > r1 * r2
+                {
+                    continue;
+                }
                 if object_a.borrow().inverse_mass == 0.0 && object_b.borrow().inverse_mass == 0.0 {
                     continue;
                 }
