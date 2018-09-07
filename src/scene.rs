@@ -3,17 +3,13 @@ use manifold::*;
 use math::*;
 use rand::*;
 use stdweb::traits::*;
-use stdweb::unstable::{TryFrom, TryInto};
-use stdweb::web::html_element::{CanvasElement, ImageElement};
-use stdweb::web::{document, CanvasRenderingContext2d, Element};
+use stdweb::unstable::TryInto;
+use stdweb::web::html_element::CanvasElement;
+use stdweb::web::{document, CanvasRenderingContext2d};
 
 pub struct Canvas {
     pub canvas: CanvasElement,
     pub context: CanvasRenderingContext2d,
-    //pub offscreen_canvas: CanvasElement,
-    //pub offscreen_context: CanvasRenderingContext2d,
-
-    // actual size / 20
     pub scaled_width: f64,
     pub scaled_height: f64,
 
@@ -33,19 +29,9 @@ impl Canvas {
         let context: CanvasRenderingContext2d = canvas.get_context().unwrap();
         let scaled_width = canvas.width() as f64 / width;
         let scaled_height = canvas.height() as f64 / height;
-        //let offscreen_canvas: CanvasElement = document
-        //.create_element("canvas")
-        //.unwrap()
-        //.try_into()
-        //.unwrap();
-        //offscreen_canvas.set_width(canvas.width());
-        //offscreen_canvas.set_height(canvas.height());
-        //let offscreen_context: CanvasRenderingContext2d = offscreen_canvas.get_context().unwrap();
         Self {
             canvas,
             context,
-            //offscreen_canvas,
-            //offscreen_context,
             scaled_width,
             scaled_height,
             width,
@@ -61,11 +47,6 @@ impl Canvas {
             self.height * self.scaled_height,
         );
     }
-    //pub fn present(&mut self) {
-    //let e: Element = self.offscreen_canvas.clone().into();
-    //let image: ImageElement = e.try_into().unwrap();
-    //self.context.draw_image(image,0.0,0.0).unwrap();
-    //}
 }
 
 pub struct Scene {
@@ -96,7 +77,7 @@ impl Scene {
         let top_left = Vector2d::new(-9.0, -0.5);
         let bottom_left = Vector2d::new(-9.0, 0.5);
         let bottom_right = Vector2d::new(9.0, 0.5);
-        let rectangle_vertices = vec![top_right, top_left, bottom_left, bottom_right];
+        let rectangle_vertices = vec![top_left, top_right, bottom_right, bottom_left];
         fixed_rectangle.set_vertices(&rectangle_vertices);
         fixed_rectangle.set_static();
         bodies.push(Box::new(fixed_rectangle) as Box<dyn RigidBody>);
@@ -114,8 +95,8 @@ impl Scene {
         let c = Circle::new(
             x / self.canvas.scaled_width,
             y / self.canvas.scaled_height,
-            // Random float from 0.5~2.5
-            self.rng.gen_range(0, 1000) as f64 / 500.0 + 0.5,
+            // Random float from 0.5~1.5
+            self.rng.gen_range(0, 10000) as f64 / 10000.0 + 0.5,
         );
         self.bodies.push(Box::new(c) as Box<dyn RigidBody>);
     }
@@ -123,8 +104,8 @@ impl Scene {
         let p = Polygon::new(
             x / self.canvas.scaled_width,
             y / self.canvas.scaled_height,
-            // Random float from 0.5~2.5
-            self.rng.gen_range(0, 1000) as f64 / 500.0 + 0.5,
+            // Random float from 0.5~1.5
+            self.rng.gen_range(0, 10000) as f64 / 10000.0 + 0.5,
         );
         self.bodies.push(Box::new(p));
     }
@@ -141,43 +122,18 @@ impl Scene {
     pub fn render(&mut self) {
         self.canvas.clear();
 
+        // Draw texts
         self.render_string("Left click to spawn a polygon.", 0.5, 1.0, 9.0);
         self.render_string("Right click to spawn a circle.", 0.5, 2.0, 9.0);
+
+        // Draw rigid bodies
         for body in &self.bodies {
             body.draw(&mut self.canvas);
         }
-        //self.canvas.present();
 
         // Draw manifolds
-        self.canvas.context.set_stroke_style_color("red");
-        self.canvas.context.set_fill_style_color("red");
         for manifold in &self.contacts {
-            for contact in &manifold.contacts {
-                self.canvas.context.fill_rect(
-                    contact.x * self.canvas.scaled_width,
-                    contact.y * self.canvas.scaled_height,
-                    0.05 * self.canvas.scaled_width,
-                    0.05 * self.canvas.scaled_width,
-                );
-            }
-        }
-        self.canvas.context.set_stroke_style_color("green");
-        for manifold in &self.contacts {
-            let n = manifold.normal;
-            for contact in &manifold.contacts {
-                self.canvas.context.begin_path();
-                let b = Vector2d::new(
-                    contact.x * self.canvas.scaled_width,
-                    contact.y * self.canvas.scaled_height,
-                ) + (-n) * 0.5 * self.canvas.scaled_width;
-                self.canvas.context.move_to(b.x, b.y);
-                let e = Vector2d::new(
-                    contact.x * self.canvas.scaled_width,
-                    contact.y * self.canvas.scaled_height,
-                ) + n * 0.5 * self.canvas.scaled_width;
-                self.canvas.context.line_to(e.x, e.y);
-                self.canvas.context.stroke();
-            }
+            manifold.draw(&mut self.canvas);
         }
     }
     pub fn step(&mut self) {

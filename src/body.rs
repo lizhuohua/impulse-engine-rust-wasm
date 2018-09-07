@@ -159,9 +159,7 @@ impl RigidBody for Circle {
             point += position;
             canvas.context.line_to(point.x, point.y);
         }
-        let mut r = Vector2d::new(0.0, radius);
-        r.rotate(object.orient);
-        r += position;
+        let r = Vector2d::new(0.0, radius).rotate(object.orient) + position;
         canvas.context.move_to(position.x, position.y);
         canvas.context.line_to(r.x, r.y);
         canvas.context.stroke();
@@ -205,7 +203,29 @@ pub struct Polygon {
 }
 
 impl Polygon {
+    pub fn get_support(&self, direction: Vector2d<f64>) -> Vector2d<f64> {
+        let mut best_projection = NEG_INFINITY;
+        let mut best_vertex = Vector2d::new(0.0, 0.0);
+        for &v in &self.vertices {
+            let projection = v * direction;
+            if projection > best_projection {
+                best_vertex = v;
+                best_projection = projection;
+            }
+        }
+        best_vertex
+    }
+
     fn initialize(&mut self) {
+        // Calculate face normals
+        self.normals.clear();
+        let n = self.vertices.len();
+        for i1 in 0..n {
+            let i2 = if i1 + 1 < n { i1 + 1 } else { 0 };
+            let face = self.vertices[i2] - self.vertices[i1];
+            let normal = Vector2d::new(face.y, -face.x).normalize();
+            self.normals.push(normal);
+        }
 
         // Calculate centroid and moment of interia
         let density = 1.0;
@@ -237,7 +257,7 @@ impl Polygon {
         object.mass = area * density;
         object.inverse_mass = 1.0 / object.mass;
         object.inertia = inertia - object.mass * centroid.len_square();
-        console!(log, "inertia: %f",object.inertia);
+        console!(log, "inertia: %f", object.inertia);
         object.inverse_inertia = 1.0 / object.inverse_inertia;
     }
     pub fn set_static(&mut self) {
@@ -245,7 +265,7 @@ impl Polygon {
     }
     pub fn set_vertices(&mut self, vertices: &Vec<Vector2d<f64>>) {
         self.vertices = vertices.clone();
-        //self.initialize();
+        self.initialize();
     }
     pub fn new(x: f64, y: f64, r: f64) -> Self {
         let mut rng = Rng::new();
@@ -294,20 +314,9 @@ impl Polygon {
             index = next_index;
         }
 
-        // Calculate face normals
-        let mut normals = Vec::new();
-        let n = result_vertices.len();
-        for i1 in 0..n {
-            let i2 = if i1 + 1 < n { i1 + 1 } else { 0 };
-            let face = result_vertices[i2] - result_vertices[i1];
-            let mut normal = Vector2d::new(face.y, -face.x);
-            normal.normalize();
-            normals.push(normal);
-        }
-
         let mut polygon = Self {
             vertices: result_vertices,
-            normals: normals,
+            normals: Vec::new(),
             object: Rc::new(RefCell::new(Object::new(x, y))),
         };
         polygon.initialize();
@@ -336,10 +345,7 @@ impl RigidBody for Polygon {
         position.x *= canvas.scaled_width;
         position.y *= canvas.scaled_height;
 
-        let mut begin = self.vertices[0];
-        begin = begin * canvas.scaled_width;
-        begin.rotate(object.orient);
-        begin += position;
+        let begin = (self.vertices[0] * canvas.scaled_width).rotate(object.orient) + position;
         canvas.context.begin_path();
         let color = format!(
             "#{:02x}{:02x}{:02x}",
@@ -348,10 +354,7 @@ impl RigidBody for Polygon {
         canvas.context.set_stroke_style_color(&color);
         canvas.context.move_to(begin.x, begin.y);
         for &v in &self.vertices {
-            let mut point = v;
-            point = point * canvas.scaled_width;
-            point.rotate(object.orient);
-            point += position;
+            let point = (v * canvas.scaled_width).rotate(object.orient) + position;
             canvas.context.line_to(point.x, point.y);
         }
         canvas.context.close_path();

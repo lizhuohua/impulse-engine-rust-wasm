@@ -1,6 +1,7 @@
 extern crate num_traits;
 pub use math::num_traits::float::Float;
 pub use math::num_traits::identities::Zero;
+pub use std::f64::{INFINITY, NEG_INFINITY};
 use std::ops::{Add, AddAssign, Div, DivAssign, Mul, MulAssign, Neg, Sub, SubAssign};
 
 #[derive(Copy, Clone, PartialEq)]
@@ -22,10 +23,12 @@ impl<T: Float> Vector2d<T> {
         self.x * self.x + self.y * self.y
     }
 
-    pub fn normalize(&mut self) {
+    pub fn normalize(&self) -> Vector2d<T> {
         let length = self.len();
-        self.x = self.x / length;
-        self.y = self.y / length;
+        Self {
+            x: self.x / length,
+            y: self.y / length,
+        }
     }
 
     pub fn set(&mut self, x: T, y: T) {
@@ -33,13 +36,13 @@ impl<T: Float> Vector2d<T> {
         self.y = y;
     }
 
-    pub fn rotate(&mut self, radians: T) {
+    pub fn rotate(&self, radians: T) -> Vector2d<T> {
         let c = radians.cos();
         let s = radians.sin();
-        let x = self.x;
-        let y = self.y;
-        self.x = x * c - y * s;
-        self.y = x * s + y * c;
+        Self {
+            x: self.x * c - self.y * s,
+            y: self.x * s + self.y * c,
+        }
     }
 }
 
