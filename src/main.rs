@@ -1,4 +1,3 @@
-#[macro_use]
 extern crate stdweb;
 #[macro_use]
 extern crate downcast_rs;
@@ -31,8 +30,8 @@ fn main() {
     // Here we need `scene` to be mutable shared
     let scene = Rc::new(RefCell::new(Scene::new()));
     scene.borrow_mut().resize(
-        (window().inner_width() as f64 * 0.6) as u32,
-        (window().inner_width() as f64 * 0.6) as u32,
+        (window().inner_width() as f64 * 0.8) as u32,
+        (window().inner_width() as f64 * 0.8) as u32,
     );
     // `add_event_listener` accepts F: FnMut(T) + 'static, so we actually cannot borrow `scene` since F can live as long as static. We have to move it.
     scene.borrow().canvas.canvas.add_event_listener({

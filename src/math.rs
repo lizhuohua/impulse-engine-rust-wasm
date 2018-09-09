@@ -1,6 +1,7 @@
 extern crate num_traits;
 pub use math::num_traits::float::Float;
-pub use math::num_traits::identities::Zero;
+//pub use math::num_traits::identities::Zero;
+use math::num_traits::Zero;
 pub use std::f64::{INFINITY, NEG_INFINITY};
 use std::ops::{Add, AddAssign, Div, DivAssign, Mul, MulAssign, Neg, Sub, SubAssign};
 
@@ -13,6 +14,13 @@ pub struct Vector2d<T: Float> {
 impl<T: Float> Vector2d<T> {
     pub fn new(x: T, y: T) -> Self {
         Self { x, y }
+    }
+
+    pub fn zero() -> Self {
+        Self {
+            x: Zero::zero(),
+            y: Zero::zero(),
+        }
     }
 
     pub fn len(&self) -> T {

@@ -22,6 +22,7 @@ pub struct Object {
     pub velocity: Vector2d<f64>,
     pub force: Vector2d<f64>,
 
+    pub density: f64,
     pub inertia: f64,
     pub inverse_inertia: f64,
     pub mass: f64,
@@ -43,23 +44,23 @@ impl Object {
         let mut rng = Rng::new();
         Self {
             position: Vector2d::new(x, y),
-            velocity: Vector2d::new(0.0, 0.0),
-            force: Vector2d::new(0.0, 0.0),
+            velocity: Vector2d::zero(),
+            force: Vector2d::zero(),
+            density: 1.0,
             inertia: 1.0,
             inverse_inertia: 1.0,
             mass: 1.0,
             inverse_mass: 1.0,
             angular_velocity: 0.0,
             torque: 0.0,
-            // orient: (rng.gen_range(0, 2000) - 1000) as f64 / 1000.0 * PI,
             orient: 0.0,
             static_friction: 0.5,
             dynamic_friction: 0.3,
             restitution: 0.2,
             color: Color {
-                r: rng.gen_range(80, 255) as u8,
-                g: rng.gen_range(80, 255) as u8,
-                b: rng.gen_range(80, 255) as u8,
+                r: rng.gen_range(0, 200) as u8,
+                g: rng.gen_range(0, 200) as u8,
+                b: rng.gen_range(0, 200) as u8,
             },
         }
     }
@@ -75,10 +76,10 @@ impl Object {
     }
 
     fn set_static(&mut self) {
-        self.inertia = Float::infinity();
-        self.inverse_inertia = f64::zero();
-        self.mass = Float::infinity();
-        self.inverse_mass = f64::zero();
+        self.inertia = INFINITY;
+        self.inverse_inertia = 0.0;
+        self.mass = INFINITY;
+        self.inverse_mass = 0.0;
     }
 
     fn integrate_forces(&mut self, dt: f64) {
@@ -181,20 +182,11 @@ impl Circle {
         c
     }
     fn initialize(&mut self) {
-        let density = 1.0;
         let mut object = self.object.borrow_mut();
-        object.mass = PI * self.radius * self.radius * density;
-        object.inverse_mass = if object.mass == f64::infinity() {
-            0.0
-        } else {
-            1.0 / object.mass
-        };
+        object.mass = PI * self.radius * self.radius * object.density;
+        object.inverse_mass = 1.0 / object.mass;
         object.inertia = object.mass * self.radius * self.radius / 2.0;
-        object.inverse_inertia = if object.inertia == f64::infinity() {
-            0.0
-        } else {
-            1.0 / object.inertia
-        };
+        object.inverse_inertia = 1.0 / object.inertia;
     }
     pub fn set_static(&mut self) {
         self.object.borrow_mut().set_static();
@@ -211,7 +203,7 @@ pub struct Polygon {
 impl Polygon {
     pub fn get_support(&self, direction: Vector2d<f64>) -> Vector2d<f64> {
         let mut best_projection = NEG_INFINITY;
-        let mut best_vertex = Vector2d::new(0.0, 0.0);
+        let mut best_vertex = Vector2d::zero();
         for &v in &self.vertices {
             let projection = v * direction;
             if projection > best_projection {
@@ -223,6 +215,7 @@ impl Polygon {
     }
 
     fn initialize(&mut self) {
+        let mut object = self.object.borrow_mut();
         // Calculate face normals
         self.normals.clear();
         let n = self.vertices.len();
@@ -234,8 +227,7 @@ impl Polygon {
         }
 
         // Calculate centroid and moment of interia
-        let density = 1.0;
-        let mut centroid = Vector2d::new(0.0, 0.0);
+        let mut centroid = Vector2d::zero();
         let mut area = 0.0;
         let mut inertia = 0.0;
         let n = self.vertices.len();
@@ -248,7 +240,8 @@ impl Polygon {
             area += triangle_area;
             centroid += (p1 + p2) * (1.0 / 3.0 * triangle_area);
             inertia +=
-                triangle_area * density * (p1.len_square() + p2.len_square() + p1 * p2) / 6.0;
+                triangle_area * object.density * (p1.len_square() + p2.len_square() + p1 * p2)
+                    / 6.0;
         }
         centroid /= area;
         // console!(log, "centroid: %f, %f", centroid.x, centroid.y);
@@ -259,20 +252,22 @@ impl Polygon {
         }
 
         // Calculate mass and interia
-        let mut object = self.object.borrow_mut();
-        object.mass = area * density;
+        object.mass = area * object.density;
         object.inverse_mass = 1.0 / object.mass;
         object.inertia = inertia - object.mass * centroid.len_square();
         // console!(log, "inertia: %f", object.inertia);
-        object.inverse_inertia = 1.0 / object.inverse_inertia;
+        object.inverse_inertia = 1.0 / object.inertia;
     }
+
     pub fn set_static(&mut self) {
         self.object.borrow_mut().set_static();
     }
+
     pub fn set_vertices(&mut self, vertices: &Vec<Vector2d<f64>>) {
         self.vertices = vertices.clone();
         self.initialize();
     }
+
     pub fn new(x: f64, y: f64, r: f64) -> Self {
         let mut rng = Rng::new();
         let count = rng.gen_range(3, 64);

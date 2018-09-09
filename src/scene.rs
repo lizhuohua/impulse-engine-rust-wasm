@@ -38,15 +38,6 @@ impl Canvas {
             height,
         }
     }
-    pub fn clear(&mut self) {
-        self.context.set_fill_style_color("white");
-        self.context.fill_rect(
-            0.0,
-            0.0,
-            self.width * self.scaled_width,
-            self.height * self.scaled_height,
-        );
-    }
 }
 
 pub struct Scene {
@@ -60,10 +51,12 @@ pub struct Scene {
 
 impl Scene {
     pub fn resize(&mut self, height: u32, width: u32) {
-        self.canvas.canvas.set_height(height);
-        self.canvas.canvas.set_width(width);
-        self.canvas.scaled_width = self.canvas.canvas.width() as f64 / self.canvas.width;
-        self.canvas.scaled_height = self.canvas.canvas.height() as f64 / self.canvas.height;
+        let h = ::std::cmp::min(800, height);
+        let w = ::std::cmp::min(800, width);
+        self.canvas.canvas.set_height(h);
+        self.canvas.canvas.set_width(w);
+        self.canvas.scaled_width = w as f64 / self.canvas.width;
+        self.canvas.scaled_height = h as f64 / self.canvas.height;
     }
     pub fn new() -> Scene {
         let canvas = Canvas::new("#canvas", 20.0, 20.0);
@@ -85,7 +78,7 @@ impl Scene {
         Scene {
             canvas: canvas,
             m_dt: 1.0 / 60.0,
-            m_iterations: 0,
+            m_iterations: 10,
             bodies: bodies,
             contacts: Vec::new(),
             rng: Rng::new(),
@@ -120,7 +113,13 @@ impl Scene {
         );
     }
     pub fn render(&mut self) {
-        self.canvas.clear();
+        // Clear canvas
+        self.canvas.context.clear_rect(
+            0.0,
+            0.0,
+            self.canvas.canvas.width() as f64,
+            self.canvas.canvas.height() as f64,
+        );
 
         // Draw texts
         self.render_string("Left click to spawn a polygon.", 0.5, 1.0, 9.0);
@@ -164,7 +163,7 @@ impl Scene {
         }
 
         // Initialize collision
-        for _ in 0..10 {
+        for _ in 0..self.m_iterations {
             for contact in &mut self.contacts {
                 contact.apply_impulse();
             }

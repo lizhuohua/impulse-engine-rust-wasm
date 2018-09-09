@@ -317,35 +317,26 @@ impl Manifold {
         let mixed_static_friction = (object_a.static_friction * object_b.static_friction).sqrt();
         let mixed_dynamic_friction = (object_a.dynamic_friction * object_b.dynamic_friction).sqrt();
 
-        let (faceA, penetrationA) = Self::find_axis_least_penetration(a, b);
-        if penetrationA >= 0.0 {
+        let (face_a, penetration_a) = Self::find_axis_least_penetration(a, b);
+        if penetration_a >= 0.0 {
             return None;
         }
-        let (faceB, penetrationB) = Self::find_axis_least_penetration(b, a);
-        if penetrationB >= 0.0 {
+        let (face_b, penetration_b) = Self::find_axis_least_penetration(b, a);
+        if penetration_b >= 0.0 {
             return None;
         }
 
-        let ref_poly;
-        let inc_poly;
         let ref_object;
-        let inc_object;
         let ref_face;
         let flip;
 
-        if penetrationA >= penetrationB {
-            ref_poly = a;
-            inc_poly = b;
+        if penetration_a >= penetration_b {
             ref_object = object_a;
-            inc_object = object_b;
-            ref_face = faceA;
+            ref_face = face_a;
             flip = false;
         } else {
-            ref_poly = b;
-            inc_poly = a;
             ref_object = object_b;
-            inc_object = object_a;
-            ref_face = faceB;
+            ref_face = face_b;
             flip = true;
         }
 
@@ -357,7 +348,7 @@ impl Manifold {
         let side_plane_normal = (v2 - v1).normalize();
         let ref_face_normal = Vector2d::new(side_plane_normal.y, -side_plane_normal.x);
 
-        let ref_C = ref_face_normal * v1;
+        let ref_c = ref_face_normal * v1;
         let neg_side = -side_plane_normal * v1;
         let pos_side = side_plane_normal * v2;
 
@@ -378,13 +369,13 @@ impl Manifold {
         let mut contacts = Vec::new();
         let mut penetration = 0.0;
 
-        let mut separation = (ref_face_normal * clipped_face.v1) - ref_C;
+        let mut separation = (ref_face_normal * clipped_face.v1) - ref_c;
         if separation <= 0.0 {
             contacts.push(clipped_face.v1);
             penetration = -separation;
         }
 
-        separation = (ref_face_normal * clipped_face.v2) - ref_C;
+        separation = (ref_face_normal * clipped_face.v2) - ref_c;
         if separation <= 0.0 {
             contacts.push(clipped_face.v2);
             penetration += -separation;
@@ -421,7 +412,7 @@ impl Manifold {
             Some(Face {
                 v1: out[0],
                 v2: out[1],
-                normal: Vector2d::new(0.0, 0.0),
+                normal: Vector2d::zero(),
             })
         }
     }
