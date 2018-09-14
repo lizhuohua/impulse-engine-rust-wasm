@@ -16,6 +16,17 @@ pub struct Color {
     b: u8,
 }
 
+impl Color {
+    fn random() -> Self {
+        let mut rng = Rng::new();
+        Self {
+            r: rng.gen_range(0, 200) as u8,
+            g: rng.gen_range(0, 200) as u8,
+            b: rng.gen_range(0, 200) as u8,
+        }
+    }
+}
+
 #[derive(Clone)]
 pub struct Object {
     pub position: Vector2d<f64>,
@@ -41,7 +52,6 @@ pub struct Object {
 
 impl Object {
     fn new(x: f64, y: f64) -> Self {
-        let mut rng = Rng::new();
         Self {
             position: Vector2d::new(x, y),
             velocity: Vector2d::zero(),
@@ -57,17 +67,9 @@ impl Object {
             static_friction: 0.5,
             dynamic_friction: 0.3,
             restitution: 0.2,
-            color: Color {
-                r: rng.gen_range(0, 200) as u8,
-                g: rng.gen_range(0, 200) as u8,
-                b: rng.gen_range(0, 200) as u8,
-            },
+            color: Color::random(),
         }
     }
-
-    //fn apply_force(&mut self, f: Vector2d<f64>) {
-    //self.force += f;
-    //}
 
     pub fn apply_impulse(&mut self, impulse: Vector2d<f64>, contact_vector: Vector2d<f64>) {
         self.velocity += impulse * self.inverse_mass;
@@ -84,7 +86,7 @@ impl Object {
 
     fn integrate_forces(&mut self, dt: f64) {
         if self.inverse_mass != 0.0 {
-            self.velocity += (self.force * self.inverse_mass + GRAVITY) * (dt);
+            self.velocity += (self.force * self.inverse_mass + GRAVITY) * dt;
             self.angular_velocity += self.torque * self.inverse_inertia * dt;
         }
     }
@@ -93,7 +95,6 @@ impl Object {
         if self.inverse_mass != 0.0 {
             self.position += self.velocity * dt;
             self.orient += self.angular_velocity * dt;
-            //self.integrate_forces(dt);
         }
     }
 }
@@ -104,8 +105,6 @@ pub trait RigidBody: Downcast {
     fn integrate_forces(&mut self, dt: f64);
 
     fn integrate_velocity(&mut self, dt: f64);
-
-    fn clear_forces(&mut self);
 
     fn object(&self) -> Rc<RefCell<Object>>;
 
@@ -122,13 +121,11 @@ impl RigidBody for Circle {
     fn radius(&self) -> f64 {
         return self.radius;
     }
-    fn clear_forces(&mut self) {
-        self.object.borrow_mut().force.set(0.0, 0.0);
-        self.object.borrow_mut().torque = 0.0;
-    }
+
     fn object(&self) -> Rc<RefCell<Object>> {
         self.object.clone()
     }
+
     fn integrate_forces(&mut self, dt: f64) {
         self.object.borrow_mut().integrate_forces(dt);
     }
@@ -136,6 +133,7 @@ impl RigidBody for Circle {
     fn integrate_velocity(&mut self, dt: f64) {
         self.object.borrow_mut().integrate_velocity(dt);
     }
+
     fn draw(&self, canvas: &mut Canvas) {
         let object = self.object.borrow();
         // Handle scale
@@ -330,13 +328,11 @@ impl RigidBody for Polygon {
     fn radius(&self) -> f64 {
         return self.radius;
     }
-    fn clear_forces(&mut self) {
-        self.object.borrow_mut().force.set(0.0, 0.0);
-        self.object.borrow_mut().torque = 0.0;
-    }
+
     fn object(&self) -> Rc<RefCell<Object>> {
         self.object.clone()
     }
+
     fn integrate_forces(&mut self, dt: f64) {
         self.object.borrow_mut().integrate_forces(dt);
     }
@@ -344,6 +340,7 @@ impl RigidBody for Polygon {
     fn integrate_velocity(&mut self, dt: f64) {
         self.object.borrow_mut().integrate_velocity(dt);
     }
+
     fn draw(&self, canvas: &mut Canvas) {
         let object = self.object.borrow();
         let mut position = object.position;

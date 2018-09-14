@@ -34,28 +34,12 @@ impl Manifold {
                 0.08 * canvas.scaled_width,
             );
         }
-        //canvas.context.set_stroke_style_color("green");
-        //let n = self.normal;
-        //for contact in &self.contacts {
-        //canvas.context.begin_path();
-        //let b = Vector2d::new(
-        //contact.x * canvas.scaled_width,
-        //contact.y * canvas.scaled_height,
-        //) + (-n) * 0.5 * canvas.scaled_width;
-        //canvas.context.move_to(b.x, b.y);
-        //let e = Vector2d::new(
-        //contact.x * canvas.scaled_width,
-        //contact.y * canvas.scaled_height,
-        //) + n * 0.5 * canvas.scaled_width;
-        //canvas.context.line_to(e.x, e.y);
-        //canvas.context.stroke();
-        //}
     }
     pub fn position_correction(&mut self) {
         let mut object_a = self.object_a.borrow_mut();
         let mut object_b = self.object_b.borrow_mut();
-        let k_slop = 0.05; // Penetration allowance
-        let percent = 0.4; // Penetration percentage to correct
+        let k_slop = 0.002; // Penetration allowance
+        let percent = 0.2; // Penetration percentage to correct
         let correction = self.normal
             * percent
             * ((self.penetration - k_slop).max(0.0)

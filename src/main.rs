@@ -29,39 +29,28 @@ fn main() {
     stdweb::initialize();
     // Here we need `scene` to be mutable shared
     let scene = Rc::new(RefCell::new(Scene::new()));
+    // stdweb::web::window().dispatch_event(&ResizeEvent{});
     scene.borrow_mut().resize(
         (window().inner_width() as f64 * 0.8) as u32,
         (window().inner_width() as f64 * 0.8) as u32,
     );
     // `add_event_listener` accepts F: FnMut(T) + 'static, so we actually cannot borrow `scene` since F can live as long as static. We have to move it.
-    scene.borrow().canvas.canvas.add_event_listener({
+    scene.borrow().canvas().add_event_listener({
         let scene = scene.clone();
         move |event: ContextMenuEvent| {
             event.prevent_default();
             scene
                 .borrow_mut()
                 .add_circle(event.offset_x(), event.offset_y());
-            //console!(
-            //log,
-            //"right click at %f, %f",
-            //event.offset_x(),
-            //event.offset_y()
-            //);
         }
     });
-    scene.borrow().canvas.canvas.add_event_listener({
+    scene.borrow().canvas().add_event_listener({
         let scene = scene.clone();
         move |event: ClickEvent| match event.button() {
             MouseButton::Left => {
                 scene
                     .borrow_mut()
                     .add_polygon(event.offset_x(), event.offset_y());
-                //console!(
-                //log,
-                //"left click at %f, %f",
-                //event.offset_x(),
-                //event.offset_y()
-                //);
             }
             _ => {}
         }

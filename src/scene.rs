@@ -41,7 +41,7 @@ impl Canvas {
 }
 
 pub struct Scene {
-    pub canvas: Canvas,
+    canvas: Canvas,
     m_dt: f64,
     m_iterations: u32,
     bodies: Vec<Box<dyn RigidBody>>,
@@ -50,6 +50,9 @@ pub struct Scene {
 }
 
 impl Scene {
+    pub fn canvas(&self) -> &CanvasElement {
+        &self.canvas.canvas
+    }
     pub fn resize(&mut self, height: u32, width: u32) {
         let h = ::std::cmp::min(800, height);
         let w = ::std::cmp::min(800, width);
@@ -144,10 +147,10 @@ impl Scene {
                 let object_b = body_b.object();
                 let r1 = body_a.radius() * self.canvas.scaled_width;
                 let r2 = body_b.radius() * self.canvas.scaled_width;
-                if (object_a.borrow().position - object_b.borrow().position).len_square() > r1 * r2
-                {
-                    continue;
-                }
+                //if (object_a.borrow().position - object_b.borrow().position).len_square() > r1 * r2
+                //{
+                    //continue;
+                //}
                 if object_a.borrow().inverse_mass == 0.0 && object_b.borrow().inverse_mass == 0.0 {
                     continue;
                 }
