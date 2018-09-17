@@ -38,12 +38,12 @@ impl Manifold {
     pub fn position_correction(&mut self) {
         let mut object_a = self.object_a.borrow_mut();
         let mut object_b = self.object_b.borrow_mut();
-        let k_slop = 0.002; // Penetration allowance
-        let percent = 0.2; // Penetration percentage to correct
+        let k_slop = 0.005; // Penetration allowance
+        let percent = 0.4; // Penetration percentage to correct
         let correction = self.normal
             * percent
             * ((self.penetration - k_slop).max(0.0)
-                / (object_a.inverse_inertia + object_b.inverse_inertia));
+                / (object_a.inverse_mass + object_b.inverse_mass));
         object_a.position -= correction * object_a.inverse_mass;
         object_b.position += correction * object_b.inverse_mass;
     }
@@ -310,22 +310,29 @@ impl Manifold {
             return None;
         }
 
+        let ref_poly;
+        let inc_poly;
         let ref_object;
         let ref_face;
         let flip;
 
-        if penetration_a >= penetration_b {
+        if penetration_a >= 0.95 * penetration_b {
+            ref_poly = a;
+            inc_poly = b;
             ref_object = object_a;
             ref_face = face_a;
             flip = false;
         } else {
+            ref_poly = b;
+            inc_poly = a;
             ref_object = object_b;
             ref_face = face_b;
             flip = true;
         }
 
-        let inc_face = Self::find_incident_face(a, b, &ref_face);
+        let inc_face = Self::find_incident_face(ref_poly, inc_poly, &ref_face);
 
+        // Transform into world's space
         let v1 = ref_face.v1.rotate(ref_object.orient) + ref_object.position;
         let v2 = ref_face.v2.rotate(ref_object.orient) + ref_object.position;
 
@@ -365,6 +372,8 @@ impl Manifold {
             penetration += -separation;
         }
         penetration /= contacts.len() as f64;
+        //console!(log, "penetration %f", penetration);
+
         Some(Manifold {
             object_a: a.object.clone(),
             object_b: b.object.clone(),
@@ -404,6 +413,7 @@ impl Manifold {
     fn find_incident_face(ref_poly: &Polygon, inc_poly: &Polygon, ref_face: &Face) -> Face {
         let ref_object = ref_poly.object.borrow();
         let inc_object = inc_poly.object.borrow();
+        // Transform reference normal into incident's model space
         let ref_normal = ref_face
             .normal
             .rotate(ref_object.orient)
@@ -419,6 +429,7 @@ impl Manifold {
             }
         }
 
+        // v2 and v2 are in the world's model space
         let v1 = inc_poly.vertices[inc_face_index].rotate(inc_object.orient) + inc_object.position;
         let inc_face_index2 = if inc_face_index + 1 < inc_poly.vertices.len() {
             inc_face_index + 1
@@ -439,11 +450,14 @@ impl Manifold {
         let object_a = a.object.borrow();
         let object_b = b.object.borrow();
         for (i, vertex) in a.vertices.iter().enumerate() {
+            // Transform face normal into B's model space
             let n = a.normals[i]
                 .rotate(object_a.orient)
                 .rotate(-object_b.orient);
+            // Get support point from B along -n, in B's model space
             let s = b.get_support(-n);
 
+            // Transform vertex into B's model space
             let v = (vertex.rotate(object_a.orient) + object_a.position - object_b.position)
                 .rotate(-object_b.orient);
 
@@ -459,6 +473,7 @@ impl Manifold {
             0
         };
         (
+            // This is in A's model space
             Face {
                 v1: a.vertices[face_index],
                 v2: a.vertices[face_index2],

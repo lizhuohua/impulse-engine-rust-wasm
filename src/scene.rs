@@ -91,8 +91,8 @@ impl Scene {
         let c = Circle::new(
             x / self.canvas.scaled_width,
             y / self.canvas.scaled_height,
-            // Random float from 0.5~1.5
-            self.rng.gen_range(0, 10000) as f64 / 10000.0 + 0.5,
+            // Random float from 0.3~0.8
+            self.rng.gen_range(0, 10000) as f64 / 20000.0 + 0.3,
         );
         self.bodies.push(Box::new(c) as Box<dyn RigidBody>);
     }
