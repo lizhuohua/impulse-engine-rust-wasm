@@ -54,6 +54,13 @@ impl<T: Float> Vector2d<T> {
     }
 }
 
+impl Mul<Vector2d<f64>> for f64 {
+    type Output = Vector2d<f64>;
+    fn mul(self, rhs: Vector2d<f64>) -> Self::Output {
+        rhs * self
+    }
+}
+
 impl<T: Float> Mul for Vector2d<T> {
     type Output = T;
     fn mul(self, rhs: Self) -> T {
