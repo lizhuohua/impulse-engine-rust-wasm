@@ -234,7 +234,7 @@ impl Polygon {
             let p1 = self.vertices[i1];
             let i2 = if i1 + 1 < n { i1 + 1 } else { 0 };
             let p2 = self.vertices[i2];
-            let triangle_area = 0.5 * p1.cross_product(p2).abs();
+            let triangle_area = 0.5 * p1.cross_product(p2); // This might be negative, if (0, 0) is outside the polygon
             area += triangle_area;
             centroid += (p1 + p2) * (1.0 / 3.0 * triangle_area);
             inertia +=
