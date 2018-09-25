@@ -147,10 +147,10 @@ impl Scene {
                 let object_b = body_b.object();
                 let r1 = body_a.radius() * self.canvas.scaled_width;
                 let r2 = body_b.radius() * self.canvas.scaled_width;
-                //if (object_a.borrow().position - object_b.borrow().position).len_square() > r1 * r2
-                //{
-                    //continue;
-                //}
+                if (object_a.borrow().position - object_b.borrow().position).len_square() > r1 * r2
+                {
+                    continue;
+                }
                 if object_a.borrow().inverse_mass == 0.0 && object_b.borrow().inverse_mass == 0.0 {
                     continue;
                 }
