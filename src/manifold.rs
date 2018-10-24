@@ -1,6 +1,6 @@
-use body::*;
-use math::*;
-use scene::*;
+use crate::body::*;
+use crate::math::*;
+use crate::scene::*;
 
 use std::cell::RefCell;
 use std::rc::Rc;
@@ -36,16 +36,17 @@ impl Manifold {
         }
     }
     pub fn position_correction(&mut self) {
+        let a_inverse_mass = self.object_a.borrow().inverse_mass;
+        let b_inverse_mass = self.object_b.borrow().inverse_mass;
         let mut object_a = self.object_a.borrow_mut();
         let mut object_b = self.object_b.borrow_mut();
         let k_slop = 0.005; // Penetration allowance
         let percent = 0.4; // Penetration percentage to correct
         let correction = self.normal
             * percent
-            * ((self.penetration - k_slop).max(0.0)
-                / (object_a.inverse_mass + object_b.inverse_mass));
-        object_a.position -= correction * object_a.inverse_mass;
-        object_b.position += correction * object_b.inverse_mass;
+            * ((self.penetration - k_slop).max(0.0) / (a_inverse_mass + b_inverse_mass));
+        object_a.position -= correction * a_inverse_mass;
+        object_b.position += correction * b_inverse_mass;
     }
 
     pub fn apply_impulse(&mut self) {

@@ -1,7 +1,7 @@
-use body::*;
-use manifold::*;
-use math::*;
-use rand::*;
+use crate::body::*;
+use crate::manifold::*;
+use crate::math::*;
+use crate::rand::*;
 use stdweb::traits::*;
 use stdweb::unstable::TryInto;
 use stdweb::web::html_element::CanvasElement;

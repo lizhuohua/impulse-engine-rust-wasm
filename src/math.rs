@@ -1,7 +1,5 @@
-extern crate num_traits;
-pub use math::num_traits::float::Float;
-//pub use math::num_traits::identities::Zero;
-use math::num_traits::Zero;
+pub use num_traits::float::Float;
+use num_traits::Zero;
 pub use std::f64::{INFINITY, NEG_INFINITY};
 use std::ops::{Add, AddAssign, Div, DivAssign, Mul, MulAssign, Neg, Sub, SubAssign};
 

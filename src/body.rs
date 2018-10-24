@@ -1,11 +1,11 @@
-use math::*;
-use rand::*;
-use scene::*;
+use crate::math::*;
+use crate::rand::*;
+use crate::scene::*;
 use std::cell::RefCell;
 use std::f64::consts::PI;
 use std::rc::Rc;
 
-use downcast_rs::Downcast;
+use downcast_rs::{impl_downcast, Downcast};
 
 const GRAVITY: Vector2d<f64> = Vector2d { x: 0.0, y: 9.8 };
 

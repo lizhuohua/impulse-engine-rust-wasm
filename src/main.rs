@@ -1,7 +1,3 @@
-extern crate stdweb;
-#[macro_use]
-extern crate downcast_rs;
-
 use std::cell::RefCell;
 use std::rc::Rc;
 use stdweb::traits::*;
@@ -13,7 +9,7 @@ mod manifold;
 mod math;
 mod rand;
 mod scene;
-use scene::*;
+use self::scene::*;
 
 fn game_loop(scene: Rc<RefCell<Scene>>) {
     let window = stdweb::web::window();

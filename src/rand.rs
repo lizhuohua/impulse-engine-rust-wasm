@@ -1,6 +1,5 @@
-extern crate rand;
-use self::rand::rngs::OsRng;
-use self::rand::RngCore;
+use rand::rngs::OsRng;
+use rand::RngCore;
 
 pub struct Rng {
     rng: OsRng,

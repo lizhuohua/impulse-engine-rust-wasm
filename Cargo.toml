@@ -1,7 +1,8 @@
 [package]
 name = "impulse-engine-wasm"
 version = "0.1.0"
-authors = ["zhuohuali"]
+authors = ["Li Zhuohua"]
+edition = "2018"
 
 [dependencies]
 num-traits = "0.2.5"
