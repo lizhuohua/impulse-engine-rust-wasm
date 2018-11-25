@@ -28,8 +28,8 @@ impl Manifold {
         canvas.context.set_fill_style_color("red");
         for contact in &self.contacts {
             canvas.context.fill_rect(
-                contact.x * canvas.scaled_width,
-                contact.y * canvas.scaled_height,
+                (contact.x - 0.04) * canvas.scaled_width,
+                (contact.y - 0.04) * canvas.scaled_height,
                 0.08 * canvas.scaled_width,
                 0.08 * canvas.scaled_width,
             );
