@@ -3,5 +3,5 @@ cache: cargo
 rust: nightly
 install:
   - rustup target add wasm32-unknown-unknown
-  - cargo install cargo-web
+  - cargo install -f cargo-web
 script: cargo web build --target=wasm32-unknown-unknown
